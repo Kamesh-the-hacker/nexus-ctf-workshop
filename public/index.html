@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<title>NEXUS CTF WORKSHOP</title>
+</head>
+<body>
+
+<div class="container">
+<h2>NEXUS CTF WORKSHOP</h2>
+
+<div class="card">
+<form id="form">
+<input placeholder="Full Name" required>
+<input placeholder="Roll Number" required>
+<input type="email" placeholder="Email Address" required>
+
+<select required>
+<option value="">Select Department</option>
+<option>CSE</option>
+<option>CSE (AI & DS)</option>
+<option>AI & ML</option>
+<option>Cyber Security</option>
+<option>IT</option>
+</select>
+
+<select required>
+<option value="">Select Year</option>
+<option>1</option>
+<option>2</option>
+<option>3</option>
+<option>4</option>
+</select>
+
+<input placeholder="Phone Number" required>
+
+<select required>
+<option value="">Attended CTF Before?</option>
+<option>Yes</option>
+<option>No</option>
+</select>
+
+<button type="submit">GENERATE ACCESS TOKEN</button>
+</form>
+
+<div id="qr"></div>
+</div>
+</div>
+
+<script>
+document.getElementById("form").addEventListener("submit", async(e)=>{
+e.preventDefault();
+const f=e.target.elements;
+
+const res=await fetch("/register",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+name:f[0].value,
+rollNo:f[1].value,
+email:f[2].value,
+department:f[3].value,
+year:f[4].value,
+phone:f[5].value,
+attendedCTF:f[6].value
+})
+});
+
+const data=await res.json();
+
+if(data.qr){
+document.getElementById("qr").innerHTML=`
+<div class="qr-card">
+<h3>ACCESS TOKEN GENERATED</h3>
+<img id="qrImg" src="${data.qr}">
+<button class="download-btn" onclick="downloadQR()">DOWNLOAD QR</button>
+</div>
+`;
+}else{
+alert(data.error);
+}
+});
+
+function downloadQR(){
+const img=document.getElementById("qrImg");
+const link=document.createElement("a");
+link.href=img.src;
+link.download="NEXUS_CTF_QR.png";
+link.click();
+}
+</script>
+
+</body>
+</html>

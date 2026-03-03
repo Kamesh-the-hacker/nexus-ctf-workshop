@@ -1,0 +1,70 @@
+body {
+  margin: 0;
+  background: #050505;
+  color: #00f2ff;
+  font-family: 'Courier New', monospace;
+}
+
+.container {
+  max-width: 420px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: #0a0a0a;
+  border: 1px solid #00f2ff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(0,242,255,0.4);
+}
+
+h2 {
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  background: #111;
+  border: 1px solid #00f2ff;
+  color: #00f2ff;
+  border-radius: 6px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: #00f2ff;
+  color: black;
+  border: none;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  box-shadow: 0 0 20px #00f2ff;
+}
+
+.qr-card {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #00f2ff;
+  background: #111;
+  text-align: center;
+}
+
+.qr-card img {
+  width: 100%;
+  max-width: 320px;
+}
+
+.download-btn {
+  margin-top: 10px;
+  background: black;
+  border: 1px solid #00f2ff;
+  color: #00f2ff;
+}

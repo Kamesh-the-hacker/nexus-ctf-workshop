@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<script>
+if(!localStorage.getItem("token")){
+alert("Login Required");
+window.location="admin.html";
+}
+</script>
+
+<div class="container">
+<h2 class="glitch">ENTRY CONTROL PANEL</h2>
+
+<div class="card">
+<h3>LIVE SYSTEM STATS</h3>
+<p>Total Registered: <span id="total">0</span></p>
+<p>Total Checked In: <span id="checked">0</span></p>
+<button onclick="exportCSV()">EXPORT ATTENDANCE</button>
+</div>
+
+<br>
+
+<div class="card">
+<h3>SCAN ACCESS TOKEN</h3>
+<div id="reader"></div>
+<div id="result"></div>
+</div>
+
+<br>
+
+<div class="card">
+<h3>CHECKPOINT LOGS</h3>
+<table border="1" width="100%">
+<thead>
+<tr>
+<th>Name</th>
+<th>Roll</th>
+<th>Dept</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody id="attendanceTable"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+// Stats
+function loadStats(){
+fetch("/stats")
+.then(res=>res.json())
+.then(data=>{
+total.innerText=data.total;
+checked.innerText=data.checkedIn;
+});
+}
+
+// Attendance
+function loadAttendance(){
+fetch("/attendance")
+.then(res=>res.json())
+.then(rows=>{
+let html="";
+rows.forEach(row=>{
+html+=`<tr>
+<td>${row.name}</td>
+<td>${row.rollNo}</td>
+<td>${row.department}</td>
+<td>${row.checkInTime}</td>
+</tr>`;
+});
+attendanceTable.innerHTML=html;
+});
+}
+
+// Export
+function exportCSV(){
+window.location="/export";
+}
+
+// Scan
+function onScanSuccess(decodedText) {
+fetch("/verify",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({qrCode:decodedText})
+})
+.then(res=>res.json())
+.then(data=>{
+if(data.status==="success"){
+result.innerHTML="<h2 style='color:#00ff88'>✔ ACCESS GRANTED<br>"+data.name+"</h2>";
+}
+else if(data.status==="already"){
+result.innerHTML="<h2 style='color:orange'>⚠ DUPLICATE ENTRY</h2>";
+}
+else{
+result.innerHTML="<h2 style='color:red'>✖ ACCESS DENIED</h2>";
+}
+loadStats();
+loadAttendance();
+});
+}
+
+new Html5QrcodeScanner("reader",{fps:10,qrbox:250}).render(onScanSuccess);
+
+loadStats();
+loadAttendance();
+setInterval(loadStats,5000);
+
+// Matrix
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+canvas.height=window.innerHeight;
+canvas.width=window.innerWidth;
+const letters="01";
+const fontSize=14;
+const columns=canvas.width/fontSize;
+const drops=[];
+for(let x=0;x<columns;x++) drops[x]=1;
+function draw(){
+ctx.fillStyle="rgba(0,0,0,0.05)";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+ctx.fillStyle="#00ff88";
+ctx.font=fontSize+"px monospace";
+for(let i=0;i<drops.length;i++){
+const text=letters[Math.floor(Math.random()*letters.length)];
+ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+if(drops[i]*fontSize>canvas.height&&Math.random()>0.975) drops[i]=0;
+drops[i]++;
+}}
+setInterval(draw,35);
+</script>
+
+</body>
+</html>

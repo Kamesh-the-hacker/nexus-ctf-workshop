@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/html5-qrcode"></script>
+<title>NEXUS Entry Control</title>
+</head>
+<body>
+
+<script>
+if(!localStorage.getItem("token")){
+alert("Login Required");
+window.location="admin.html";
+}
+</script>
+
+<div class="container">
+<h2>NEXUS ENTRY CONTROL</h2>
+
+<div class="card">
+<p>Total Registered: <span id="total">0</span></p>
+<p>Total Checked In: <span id="checked">0</span></p>
+<button onclick="exportCSV()">EXPORT ATTENDANCE</button>
+</div>
+
+<br>
+
+<div class="card">
+<h3>SCAN QR</h3>
+<div id="reader"></div>
+<div id="result"></div>
+</div>
+
+<br>
+
+<div class="card">
+<h3>CHECKPOINT LOGS</h3>
+<table border="1" width="100%">
+<thead>
+<tr>
+<th>Name</th>
+<th>Roll</th>
+<th>Dept</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody id="attendanceTable"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+function loadStats(){
+fetch("/stats")
+.then(res=>res.json())
+.then(data=>{
+total.innerText=data.total;
+checked.innerText=data.checked;
+});
+}
+
+function loadAttendance(){
+fetch("/attendance")
+.then(res=>res.json())
+.then(rows=>{
+let html="";
+rows.forEach(r=>{
+html+=`<tr>
+<td>${r.name}</td>
+<td>${r.rollNo}</td>
+<td>${r.department}</td>
+<td>${r.checkInTime}</td>
+</tr>`;
+});
+attendanceTable.innerHTML=html;
+});
+}
+
+function exportCSV(){
+window.location="/export";
+}
+
+function onScanSuccess(decodedText) {
+fetch("/verify",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({qrCode:decodedText})
+})
+.then(res=>res.json())
+.then(data=>{
+if(data.status==="success"){
+result.innerHTML="<h3 style='color:#00ff88'>ACCESS GRANTED</h3>";
+}else if(data.status==="already"){
+result.innerHTML="<h3 style='color:orange'>ALREADY CHECKED</h3>";
+}else{
+result.innerHTML="<h3 style='color:red'>INVALID QR</h3>";
+}
+loadStats();
+loadAttendance();
+});
+}
+
+new Html5QrcodeScanner("reader",{fps:10,qrbox:350}).render(onScanSuccess);
+
+loadStats();
+loadAttendance();
+</script>
+
+</body>
+</html>
