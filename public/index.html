@@ -8,7 +8,7 @@
 <body>
 
 <div class="container">
-<h2>NEXUS CTF WORKSHOP</h2>
+<h1>NEXUS CTF WORKSHOP</h1>
 
 <div class="card">
 <form id="form">
@@ -70,25 +70,23 @@ attendedCTF:f[6].value
 const data=await res.json();
 
 if(data.qr){
+
 document.getElementById("qr").innerHTML=`
 <div class="qr-card">
 <h3>ACCESS TOKEN GENERATED</h3>
-<img id="qrImg" src="${data.qr}">
-<button class="download-btn" onclick="downloadQR()">DOWNLOAD QR</button>
+<img src="${data.qr}" width="300">
+<p>QR downloaded automatically ✔</p>
 </div>
 `;
-}else{
-alert(data.error);
-}
-});
 
-function downloadQR(){
-const img=document.getElementById("qrImg");
+// Auto download
 const link=document.createElement("a");
-link.href=img.src;
-link.download="NEXUS_CTF_QR.png";
+link.href=data.qr;
+link.download="NEXUS_"+f[1].value+"_QR.png";
 link.click();
-}
+
+}else alert(data.error);
+});
 </script>
 
 </body>
