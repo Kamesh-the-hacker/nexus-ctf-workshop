@@ -2,110 +2,229 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="style.css">
+<title>NEXUS CTF ADMIN</title>
+
 <script src="https://unpkg.com/html5-qrcode"></script>
-<title>NEXUS Entry Control</title>
+
+<style>
+
+body{
+margin:0;
+background:#050505;
+color:#00f2ff;
+font-family:Arial, sans-serif;
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+}
+
+.container{
+width:100%;
+max-width:420px;
+padding:20px;
+}
+
+.card{
+background:#0d0d0d;
+border:1px solid #00f2ff;
+border-radius:12px;
+padding:20px;
+box-shadow:0 0 20px rgba(0,242,255,0.3);
+}
+
+h2{
+text-align:center;
+margin-bottom:20px;
+}
+
+input{
+width:100%;
+padding:12px;
+margin-bottom:12px;
+border-radius:6px;
+border:1px solid #00f2ff;
+background:#111;
+color:#00f2ff;
+}
+
+button{
+width:100%;
+padding:12px;
+border:none;
+background:#00f2ff;
+color:black;
+font-weight:bold;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+box-shadow:0 0 15px #00f2ff;
+}
+
+#reader{
+margin-top:20px;
+width:100%;
+}
+
+#result{
+margin-top:15px;
+padding:10px;
+border-radius:6px;
+text-align:center;
+}
+
+.success{
+background:#003c2f;
+color:#00ffae;
+}
+
+.error{
+background:#3c0000;
+color:#ff4c4c;
+}
+
+.stats{
+display:flex;
+justify-content:space-between;
+margin-top:15px;
+font-size:14px;
+}
+
+</style>
 </head>
+
 <body>
 
-<script>
-if(!localStorage.getItem("token")){
-alert("Login Required");
-window.location="admin.html";
-}
-</script>
-
 <div class="container">
-<h2>NEXUS ENTRY CONTROL</h2>
+
+<h2>NEXUS CTF ADMIN</h2>
 
 <div class="card">
-<p>Total Registered: <span id="total">0</span></p>
-<p>Total Checked In: <span id="checked">0</span></p>
-<button onclick="exportCSV()">EXPORT ATTENDANCE</button>
+
+<div id="login">
+
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+
+<button onclick="login()">LOGIN</button>
+
 </div>
 
-<br>
+<div id="scanner" style="display:none">
 
-<div class="card">
-<h3>SCAN QR</h3>
 <div id="reader"></div>
+
 <div id="result"></div>
+
+<div class="stats">
+<div>Total Registered: <span id="total">0</span></div>
+<div>Checked In: <span id="checked">0</span></div>
 </div>
 
-<br>
+<button onclick="exportCSV()" style="margin-top:15px">
+Export CSV
+</button>
 
-<div class="card">
-<h3>CHECKPOINT LOGS</h3>
-<table border="1" width="100%">
-<thead>
-<tr>
-<th>Name</th>
-<th>Roll</th>
-<th>Dept</th>
-<th>Time</th>
-</tr>
-</thead>
-<tbody id="attendanceTable"></tbody>
-</table>
+</div>
+
 </div>
 
 </div>
 
 <script>
-function loadStats(){
-fetch("/stats")
-.then(res=>res.json())
-.then(data=>{
-total.innerText=data.total;
-checked.innerText=data.checked;
-});
+
+async function login(){
+
+const res = await fetch("/admin/login",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+username:user.value,
+password:pass.value
+})
+})
+
+const data = await res.json()
+
+if(data.token){
+
+localStorage.setItem("token",data.token)
+
+document.getElementById("login").style.display="none"
+document.getElementById("scanner").style.display="block"
+
+startScanner()
+loadStats()
+
+}else{
+alert(data.error)
 }
 
-function loadAttendance(){
-fetch("/attendance")
-.then(res=>res.json())
-.then(rows=>{
-let html="";
-rows.forEach(r=>{
-html+=`<tr>
-<td>${r.name}</td>
-<td>${r.rollNo}</td>
-<td>${r.department}</td>
-<td>${r.checkInTime}</td>
-</tr>`;
-});
-attendanceTable.innerHTML=html;
-});
+}
+
+function startScanner(){
+
+const qr = new Html5Qrcode("reader")
+
+qr.start(
+{ facingMode:"environment" },
+{ fps:10, qrbox:250 },
+onScanSuccess
+)
+
+}
+
+async function onScanSuccess(decodedText){
+
+const res = await fetch("/verify",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({ qrCode:decodedText })
+})
+
+const data = await res.json()
+
+const result = document.getElementById("result")
+
+if(data.status==="success"){
+
+result.className="success"
+result.innerHTML="✔ "+data.name+" Checked In"
+
+loadStats()
+
+}else if(data.status==="already"){
+
+result.className="error"
+result.innerHTML="⚠ Already Scanned"
+
+}else{
+
+result.className="error"
+result.innerHTML="✖ Invalid QR"
+
+}
+
+}
+
+async function loadStats(){
+
+const res = await fetch("/stats")
+const data = await res.json()
+
+document.getElementById("total").innerText=data.total
+document.getElementById("checked").innerText=data.checked
+
 }
 
 function exportCSV(){
-window.location="/export";
+
+window.location="/export"
+
 }
 
-function onScanSuccess(decodedText) {
-fetch("/verify",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({qrCode:decodedText})
-})
-.then(res=>res.json())
-.then(data=>{
-if(data.status==="success"){
-result.innerHTML="<h3 style='color:#00ff88'>ACCESS GRANTED</h3>";
-}else if(data.status==="already"){
-result.innerHTML="<h3 style='color:orange'>ALREADY CHECKED</h3>";
-}else{
-result.innerHTML="<h3 style='color:red'>INVALID QR</h3>";
-}
-loadStats();
-loadAttendance();
-});
-}
-
-new Html5QrcodeScanner("reader",{fps:10,qrbox:350}).render(onScanSuccess);
-
-loadStats();
-loadAttendance();
 </script>
 
 </body>
