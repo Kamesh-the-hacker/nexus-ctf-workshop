@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>NEXUS CTF ADMIN</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -12,7 +14,7 @@ body{
 margin:0;
 background:#050505;
 color:#00f2ff;
-font-family:Arial, sans-serif;
+font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
@@ -60,29 +62,12 @@ cursor:pointer;
 }
 
 button:hover{
-box-shadow:0 0 15px #00f2ff;
+box-shadow:0 0 10px #00f2ff;
 }
 
 #reader{
-margin-top:20px;
 width:100%;
-}
-
-#result{
-margin-top:15px;
-padding:10px;
-border-radius:6px;
-text-align:center;
-}
-
-.success{
-background:#003c2f;
-color:#00ffae;
-}
-
-.error{
-background:#3c0000;
-color:#ff4c4c;
+margin-top:10px;
 }
 
 .stats{
@@ -92,7 +77,43 @@ margin-top:15px;
 font-size:14px;
 }
 
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+font-size:13px;
+}
+
+th,td{
+border-bottom:1px solid #00f2ff33;
+padding:6px;
+text-align:left;
+}
+
+.success-animation{
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+background:rgba(0,0,0,0.9);
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:40px;
+color:#00ff9d;
+z-index:999;
+animation:fadeout 1.2s forwards;
+}
+
+@keyframes fadeout{
+0%{opacity:1}
+80%{opacity:1}
+100%{opacity:0;visibility:hidden}
+}
+
 </style>
+
 </head>
 
 <body>
@@ -112,38 +133,69 @@ font-size:14px;
 
 </div>
 
+
 <div id="scanner" style="display:none">
 
 <div id="reader"></div>
 
-<div id="result"></div>
-
 <div class="stats">
-<div>Total Registered: <span id="total">0</span></div>
-<div>Checked In: <span id="checked">0</span></div>
+
+<div>Total: <span id="total">0</span></div>
+
+<div>Checked: <span id="checked">0</span></div>
+
 </div>
 
-<button onclick="exportCSV()" style="margin-top:15px">
+<button onclick="exportCSV()" style="margin-top:10px">
 Export CSV
 </button>
 
-</div>
+<h3>Checked In Users</h3>
+
+<table id="table">
+
+<thead>
+
+<tr>
+<th>Name</th>
+<th>Roll</th>
+<th>Dept</th>
+<th>Time</th>
+</tr>
+
+</thead>
+
+<tbody></tbody>
+
+</table>
 
 </div>
 
 </div>
+
+</div>
+
+
+<audio id="beep" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
 
 <script>
+
+let scanner
 
 async function login(){
 
 const res = await fetch("/admin/login",{
+
 method:"POST",
+
 headers:{"Content-Type":"application/json"},
+
 body:JSON.stringify({
 username:user.value,
 password:pass.value
 })
+
 })
 
 const data = await res.json()
@@ -153,71 +205,164 @@ if(data.token){
 localStorage.setItem("token",data.token)
 
 document.getElementById("login").style.display="none"
+
 document.getElementById("scanner").style.display="block"
 
-startScanner()
+setTimeout(startScanner,500)
+
 loadStats()
+loadTable()
 
 }else{
+
 alert(data.error)
+
 }
 
 }
+
 
 function startScanner(){
 
-const qr = new Html5Qrcode("reader")
+scanner = new Html5Qrcode("reader")
 
-qr.start(
-{ facingMode:"environment" },
-{ fps:10, qrbox:250 },
+scanner.start(
+
+{facingMode:"environment"},
+
+{fps:10,qrbox:250},
+
 onScanSuccess
+
 )
 
 }
 
-async function onScanSuccess(decodedText){
+
+
+async function onScanSuccess(text){
+
+document.getElementById("beep").play()
 
 const res = await fetch("/verify",{
+
 method:"POST",
+
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({ qrCode:decodedText })
+
+body:JSON.stringify({qrCode:text})
+
 })
 
 const data = await res.json()
 
-const result = document.getElementById("result")
-
 if(data.status==="success"){
 
-result.className="success"
-result.innerHTML="✔ "+data.name+" Checked In"
+showSuccess(data.name)
 
 loadStats()
-
-}else if(data.status==="already"){
-
-result.className="error"
-result.innerHTML="⚠ Already Scanned"
-
-}else{
-
-result.className="error"
-result.innerHTML="✖ Invalid QR"
+loadTable()
 
 }
 
 }
+
+
+function showSuccess(name){
+
+const div=document.createElement("div")
+
+div.className="success-animation"
+
+div.innerHTML="✔ "+name
+
+document.body.appendChild(div)
+
+setTimeout(()=>{
+
+div.remove()
+
+},1200)
+
+}
+
+
 
 async function loadStats(){
 
 const res = await fetch("/stats")
+
 const data = await res.json()
 
-document.getElementById("total").innerText=data.total
-document.getElementById("checked").innerText=data.checked
+animateCounter("total",data.total)
+
+animateCounter("checked",data.checked)
 
 }
+
+
+
+function animateCounter(id,value){
+
+let start=0
+
+let end=value
+
+let step=Math.ceil(end/20)
+
+let counter=setInterval(()=>{
+
+start+=step
+
+if(start>=end){
+
+start=end
+
+clearInterval(counter)
+
+}
+
+document.getElementById(id).innerText=start
+
+},20)
+
+}
+
+
+
+async function loadTable(){
+
+const res = await fetch("/attendance")
+
+const users = await res.json()
+
+const body=document.querySelector("#table tbody")
+
+body.innerHTML=""
+
+users.forEach(u=>{
+
+body.innerHTML+=`
+
+<tr>
+
+<td>${u.name}</td>
+
+<td>${u.rollNo}</td>
+
+<td>${u.department}</td>
+
+<td>${u.checkInTime}</td>
+
+</tr>
+
+`
+
+})
+
+}
+
+
 
 function exportCSV(){
 
@@ -228,4 +373,5 @@ window.location="/export"
 </script>
 
 </body>
+
 </html>
